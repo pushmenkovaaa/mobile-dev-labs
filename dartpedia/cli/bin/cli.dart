@@ -1,6 +1,7 @@
 
 
 const version = '0.0.1';
+
 void main(List<String> arguments) {
   if (arguments.isEmpty || arguments.first == 'help') {
     printUsage();
