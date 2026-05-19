@@ -1,5 +1,20 @@
 
 
+const version = '0.0.1';
 void main(List<String> arguments) {
-  print('Hello, Dart!');
+  if (arguments.isEmpty || arguments.first == 'help') {
+    printUsage();
+  } else if (arguments.first == 'version') {
+    print('Dartpedia CLI version $version');
+  } else if (arguments.first == 'search') {
+    print('Search command recognized!');
+  } else {
+    printUsage();
+  }
+}
+
+void printUsage() {
+  print(
+    "The following commands are valid: 'help', 'version', 'search <ARTICLE-TITLE>'"
+  );
 }
