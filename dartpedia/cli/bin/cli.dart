@@ -36,17 +36,23 @@ Future<String> getWikipediaArticle(String articleTitle) async {
   return 'Error: Failed to fetch article "$articleTitle". Status code: ${response.statusCode}';
 }
 
-void searchWikipedia(List<String>? arguments) {
+void searchWikipedia(List<String>? arguments) async {
   final String articleTitle;
 
-  if (arguments == null || arguments.isEmpty) {
+    if (arguments == null || arguments.isEmpty) {
     print('Please provide an article title.');
-    articleTitle = stdin.readLineSync() ?? '';
+    final inputFromStdin = stdin.readLineSync();
+    if (inputFromStdin == null || inputFromStdin.isEmpty) {
+      print('No article title provided. Exiting.');
+      return;
+    }
+    articleTitle = inputFromStdin;
   } else {
     articleTitle = arguments.join(' ');
   }
 
-  print('Looking up articles about "$articleTitle". Please wait.');
-print('Here ya go!');
-print('(Pretend this is an article about "$articleTitle")');
+    print('Looking up articles about "$articleTitle". Please wait.');
+
+  var articleContent = await getWikipediaArticle(articleTitle);
+  print(articleContent);
 }
