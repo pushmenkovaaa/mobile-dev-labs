@@ -1,4 +1,5 @@
 name: command_runner
+resolution: workspace
 description: A simple command runner for CLI applications.
 version: 0.0.1
 
