@@ -53,7 +53,6 @@ class HelpCommand extends Command {
       return _renderCommandVerbose(cmd);
     }
 
-    // Verbose is false and no arg was passed in, so print basic usage.
     for (var command in runner.commands) {
       buffer.writeln(command.usage);
     }
