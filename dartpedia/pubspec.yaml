@@ -1,4 +1,5 @@
 name: _
+resolution: workspace  
 publish_to: none
 
 environment:
