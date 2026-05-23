@@ -1,137 +1,79 @@
 import 'dart:async';
-import 'dart:collection';
-import 'dart:io';
-
-import 'arguments.dart';
+import 'package:command_runner/command_runner.dart';
+import 'console.dart';
 import 'exceptions.dart';
 
-class CommandRunner {
-  CommandRunner({this.onError});
-
-  final Map<String, Command> _commands = <String, Command>{};
-
-  UnmodifiableSetView<Command> get commands =>
-      UnmodifiableSetView<Command>(<Command>{..._commands.values});
-
-  FutureOr<void> Function(Object)? onError;
-
-  Future<void> run(List<String> input) async {
-    try {
-      final ArgResults results = parse(input);
-      if (results.command != null) {
-        Object? output = await results.command!.run(results);
-        print(output.toString());
-      }
-    } on Exception catch (exception) {
-      if (onError != null) {
-        onError!(exception);
-      } else {
-        rethrow;
-      }
-    }
+class HelpCommand extends Command {
+  HelpCommand() {
+    addFlag(
+      'verbose',
+      abbr: 'v',
+      help: 'When true, this command will print each command and its options.',
+    );
+    addOption(
+      'command',
+      abbr: 'c',
+      help: "When a command is passed as an argument, prints only that command's verbose usage.",
+    );
   }
 
-  void addCommand(Command command) {
-    _commands[command.name] = command;
-    command.runner = this;
-  }
+  @override
+  String get name => 'help';
 
-  ArgResults parse(List<String> input) {
-    ArgResults results = ArgResults();
-    if (input.isEmpty) return results;
+  @override
+  String get description => 'Prints usage information to the command line.';
 
-    if (_commands.containsKey(input.first)) {
-      results.command = _commands[input.first];
-      input = input.sublist(1);
-    } else {
-      throw ArgumentException(
-        'The first word of input must be a command.',
-        null,
-        input.first,
-      );
+  @override
+  String? get help => 'Prints this usage information';
+
+  @override
+  FutureOr<String> run(ArgResults args) async {
+    final buffer = StringBuffer();
+    buffer.writeln(runner.usage.titleText);
+
+    if (args.flag('verbose')) {
+      for (var cmd in runner.commands) {
+        buffer.write(_renderCommandVerbose(cmd));
+      }
+      return buffer.toString();
     }
 
-    if (results.command != null &&
-        input.isNotEmpty &&
-        _commands.containsKey(input.first)) {
-      throw ArgumentException(
-        'Input can only contain one command. Got ${input.first} and ${results.command!.name}',
-        null,
-        input.first,
-      );
-    }
+    if (args.hasOption('command')) {
+      var (:option, :input) = args.getOption('command');
 
-    Map<Option, Object?> inputOptions = {};
-    int i = 0;
-    while (i < input.length) {
-      if (input[i].startsWith('-')) {
-        var base = _removeDash(input[i]);
-        
-        var option = results.command!.options.firstWhere(
-          (option) => option.name == base || option.abbr == base,
-          orElse: () {
-            throw ArgumentException(
-              'Unknown option ${input[i]}',
-              results.command!.name,
-              input[i],
-            );
-          },
-        );
-
-        if (option.type == OptionType.flag) {
-          inputOptions[option] = true;
-          i++;
-          continue;
-        }
-
-        if (option.type == OptionType.option) {
-          if (i + 1 >= input.length) {
-            throw ArgumentException(
-              'Option ${option.name} requires an argument',
-              results.command!.name,
-              option.name,
-            );
-          }
-          if (input[i + 1].startsWith('-')) {
-            throw ArgumentException(
-              'Option ${option.name} requires an argument, but got another option ${input[i + 1]}',
-              results.command!.name,
-              option.name,
-            );
-          }
-          var arg = input[i + 1];
-          inputOptions[option] = arg;
-          i++;
-        }
-      } else {
-        if (results.commandArg != null && results.commandArg!.isNotEmpty) {
+      var cmd = runner.commands.firstWhere(
+        (command) => command.name == input,
+        orElse: () {
           throw ArgumentException(
-            'Commands can only have up to one argument.',
-            results.command!.name,
-            input[i],
+            'Input ${args.commandArg} is not a known command.',
           );
-        }
-        results.commandArg = input[i];
-      }
-      i++;
-    }
-    results.options = inputOptions;
+        },
+      );
 
-    return results;
+      return _renderCommandVerbose(cmd);
+    }
+
+    for (var command in runner.commands) {
+      buffer.writeln(command.usage);
+    }
+
+    return buffer.toString();
   }
 
-  String _removeDash(String input) {
-    if (input.startsWith('--')) {
-      return input.substring(2);
+  String _renderCommandVerbose(Command cmd) {
+    final indent = ' ' * 10;
+    final buffer = StringBuffer();
+    buffer.writeln(cmd.usage.instructionText);
+    buffer.writeln('$indent ${cmd.help}');
+    if (cmd.valueHelp != null) {
+      buffer.writeln(
+        '$indent [Argument] Required? ${cmd.requiresArgument}, Type: ${cmd.valueHelp}, Default: ${cmd.defaultValue ?? 'none'}',
+      );
     }
-    if (input.startsWith('-')) {
-      return input.substring(1);
+    buffer.writeln('$indent Options:');
+    for (var option in cmd.options) {
+      buffer.writeln('$indent ${option.usage}');
     }
-    return input;
-  }
-
-  String get usage {
-    final exeFile = Platform.script.path.split('/').last;
-    return 'Usage: dart bin/$exeFile <command> [commandArg?] [...options?]';
+    return buffer.toString();
   }
 }
