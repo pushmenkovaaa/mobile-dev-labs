@@ -1,25 +1,21 @@
-import 'dart:async'; 
+import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
+
 import 'arguments.dart';
-import 'exceptions.dart'; 
+import 'exceptions.dart';
 
 class CommandRunner {
-   
-    CommandRunner({this.onError});
+  CommandRunner({this.onError});
 
   final Map<String, Command> _commands = <String, Command>{};
 
   UnmodifiableSetView<Command> get commands =>
       UnmodifiableSetView<Command>(<Command>{..._commands.values});
 
-  // ← Добавить свойство:
   FutureOr<void> Function(Object)? onError;
 
-  UnmodifiableSetView<Command> get commands =>
-      UnmodifiableSetView<Command>(<Command>{..._commands.values});
-
-    Future<void> run(List<String> input) async {
+  Future<void> run(List<String> input) async {
     try {
       final ArgResults results = parse(input);
       if (results.command != null) {
@@ -40,11 +36,10 @@ class CommandRunner {
     command.runner = this;
   }
 
-    ArgResults parse(List<String> input) {
+  ArgResults parse(List<String> input) {
     ArgResults results = ArgResults();
     if (input.isEmpty) return results;
 
-    // Проверка: первая команда должна быть известна
     if (_commands.containsKey(input.first)) {
       results.command = _commands[input.first];
       input = input.sublist(1);
@@ -56,7 +51,6 @@ class CommandRunner {
       );
     }
 
-    // Проверка: нельзя указать две команды подряд
     if (results.command != null &&
         input.isNotEmpty &&
         _commands.containsKey(input.first)) {
@@ -67,14 +61,12 @@ class CommandRunner {
       );
     }
 
-    // Обработка опций и флагов
     Map<Option, Object?> inputOptions = {};
     int i = 0;
     while (i < input.length) {
       if (input[i].startsWith('-')) {
         var base = _removeDash(input[i]);
         
-        // Проверка: опция должна быть известна
         var option = results.command!.options.firstWhere(
           (option) => option.name == base || option.abbr == base,
           orElse: () {
@@ -93,7 +85,6 @@ class CommandRunner {
         }
 
         if (option.type == OptionType.option) {
-          // Проверка: у опции должно быть значение
           if (i + 1 >= input.length) {
             throw ArgumentException(
               'Option ${option.name} requires an argument',
@@ -101,7 +92,6 @@ class CommandRunner {
               option.name,
             );
           }
-          // Проверка: значение не должно начинаться с "-"
           if (input[i + 1].startsWith('-')) {
             throw ArgumentException(
               'Option ${option.name} requires an argument, but got another option ${input[i + 1]}',
@@ -114,7 +104,6 @@ class CommandRunner {
           i++;
         }
       } else {
-        // Проверка: только один позиционный аргумент
         if (results.commandArg != null && results.commandArg!.isNotEmpty) {
           throw ArgumentException(
             'Commands can only have up to one argument.',
