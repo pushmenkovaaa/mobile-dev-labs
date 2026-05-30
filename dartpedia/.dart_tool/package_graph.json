@@ -36,7 +36,9 @@
     {
       "name": "wikipedia",
       "version": "1.0.0",
-      "dependencies": [],
+      "dependencies": [
+        "http"
+      ],
       "devDependencies": [
         "lints",
         "test"
